@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Günüm</title>
+<meta name="description" content="Kişisel ve iş rutinleri için günlük planlayıcı">
+<meta name="theme-color" content="#F6F1EA" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#171513" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Günüm">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+:root{
+  --bg:#F6F1EA; --card:#FFFFFF; --ink:#2A2522; --soft:#7A716A; --line:#E7DFD5; --chip:#EEE7DD;
+  --kisisel:#2F8F73; --kisisel-bg:#E3F2EC; --is:#5560C8; --is-bg:#E8EAFA;
+  --warn:#C2603A; --warn-bg:#FBEBE3; --shadow:0 1px 2px rgba(60,40,20,.06),0 8px 24px rgba(60,40,20,.06);
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#171513; --card:#221F1C; --ink:#F2ECE4; --soft:#A39A91; --line:#35302B; --chip:#2C2824;
+  --kisisel:#5CC2A2; --kisisel-bg:#1D3830; --is:#8F99F2; --is-bg:#252A4D;
+  --warn:#EE9068; --warn-bg:#40261B; --shadow:none;
+}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0}
+h1,h2,h3,p{margin:0}
+#main{max-width:1180px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 16px 24px}
+
+/* gezinme */
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--line);
+  padding:6px 6px calc(6px + env(safe-area-inset-bottom));z-index:5}
+nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:14px;
+  font-size:12px;color:var(--soft)}
+nav button span{font-size:20px;line-height:1}
+nav button.on{color:var(--ink);background:var(--chip);font-weight:600}
+nav .logo{display:none}
+@media (min-width:900px){
+  body{padding:0 0 0 220px}
+  nav{top:0;bottom:0;right:auto;width:220px;flex-direction:column;justify-content:flex-start;gap:4px;
+    border-top:0;border-right:1px solid var(--line);padding:22px 14px}
+  nav button{flex:none;flex-direction:row;gap:12px;padding:12px 14px;font-size:15px}
+  nav .logo{display:block;font-size:22px;font-weight:700;padding:4px 14px 18px;letter-spacing:-.02em}
+  #main{padding:30px 32px 40px}
+}
+
+/* üst bölüm */
+.top{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.top .when{flex:1;min-width:0}
+.top h1{font-size:26px;letter-spacing:-.02em;line-height:1.15}
+.top .sub{color:var(--soft);font-size:14px;margin-top:2px}
+.ring{position:relative;width:64px;height:64px;flex:none}
+.ring svg{transform:rotate(-90deg)}
+.ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:15px}
+.ibtn{width:40px;height:40px;border-radius:12px;background:var(--card);border:1px solid var(--line);font-size:18px;flex:none}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:14px}
+.week button{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px 0 7px;display:flex;
+  flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--soft)}
+.week button b{font-size:16px;color:var(--ink)}
+.week button i{width:18px;height:4px;border-radius:2px;background:var(--line);overflow:hidden;display:block}
+.week button i u{display:block;height:100%;background:var(--kisisel)}
+.week button.sel{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.week button.sel b{color:var(--bg)}
+.week button.now:not(.sel){border-color:var(--ink)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.chip{padding:8px 14px;border-radius:999px;background:var(--chip);font-size:14px;color:var(--soft)}
+.chip.on{background:var(--ink);color:var(--bg);font-weight:600}
+
+/* kartlar */
+.grid{display:grid;gap:14px}
+@media (min-width:900px){.grid.three{grid-template-columns:repeat(3,1fr);align-items:start}}
+.card{background:var(--card);border-radius:20px;padding:16px;box-shadow:var(--shadow);border:1px solid var(--line)}
+.card h2{font-size:17px;display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.card h2 small{margin-left:auto;font-weight:500;color:var(--soft);font-size:13px}
+.card h3{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);margin:12px 0 4px}
+.item{display:flex;align-items:center;gap:12px;padding:9px 0;border-top:1px solid var(--line)}
+.item:first-of-type{border-top:0}
+.chk{width:26px;height:26px;border-radius:9px;border:2px solid var(--c);flex:none;display:grid;place-items:center;
+  color:transparent;font-size:15px;font-weight:700}
+.item.done .chk{background:var(--c);color:var(--card)}
+.item .t{flex:1;min-width:0;text-align:left}
+.item.done .t>span{text-decoration:line-through;color:var(--soft)}
+.item .m{display:flex;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--soft);margin-top:1px}
+.tag{padding:1px 7px;border-radius:6px;background:var(--cb);color:var(--c);font-weight:600}
+.kisisel{--c:var(--kisisel);--cb:var(--kisisel-bg)} .is{--c:var(--is);--cb:var(--is-bg)}
+.more{color:var(--soft);font-size:20px;width:34px;height:34px;border-radius:10px;flex:none}
+.add{width:100%;margin-top:8px;padding:10px;border-radius:12px;border:1px dashed var(--line);color:var(--soft);font-size:14px}
+.late{background:var(--warn-bg);border-color:transparent;margin-bottom:14px}
+.late h2{color:var(--warn)}
+.empty{color:var(--soft);font-size:14px;padding:8px 0}
+.btn{padding:10px 16px;border-radius:12px;background:var(--ink);color:var(--bg);font-weight:600;font-size:14px}
+.btn.ghost{background:var(--chip);color:var(--ink)}
+.btn.sm{padding:6px 10px;font-size:13px}
+.btn.danger{background:var(--warn-bg);color:var(--warn)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.row.sp{justify-content:space-between;padding:9px 0;border-top:1px solid var(--line)}
+.note{font-size:13px;color:var(--soft);margin-top:8px}
+.bars{display:flex;align-items:flex-end;gap:8px;height:110px;margin-top:10px}
+.bars div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%;
+  font-size:11px;color:var(--soft)}
+.bars i{display:block;width:100%;max-width:38px;border-radius:8px 8px 3px 3px;background:var(--kisisel);min-height:3px}
+.fab{position:fixed;right:18px;bottom:calc(90px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:20px;
+  background:var(--ink);color:var(--bg);font-size:30px;line-height:1;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:6}
+@media (min-width:900px){.fab{bottom:28px;right:28px}}
+
+/* pencere */
+dialog{border:0;border-radius:22px;padding:20px;background:var(--card);color:var(--ink);width:min(460px,calc(100vw - 24px));
+  max-height:calc(100dvh - 24px)}
+dialog::backdrop{background:rgba(20,15,10,.5)}
+dialog h2{font-size:20px;margin-bottom:12px}
+label{display:block;font-size:13px;color:var(--soft);margin:12px 0 5px}
+input[type=text],input[type=date],input[type=time]{width:100%;padding:11px 12px;border-radius:12px;border:1px solid var(--line);
+  background:var(--bg);font-size:16px}
+input[type=time].in{width:auto;padding:7px 9px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1;padding:9px 6px;border-radius:12px;background:var(--chip);font-size:14px;color:var(--soft);white-space:nowrap}
+.seg button.on{background:var(--ink);color:var(--bg);font-weight:600}
+.seg.days button{flex:1 0 38px;padding:9px 0}
+.actions{display:flex;gap:8px;margin-top:20px}
+.actions .btn{flex:1;padding:12px}
+#toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top));transform:translate(-50%,-140%);background:var(--ink);
+  color:var(--bg);padding:12px 16px;border-radius:14px;z-index:20;max-width:calc(100vw - 24px);transition:transform .3s;font-size:14px}
+#toast.show{transform:translate(-50%,0)}
+:focus-visible{outline:2px solid var(--is);outline-offset:2px}
+</style>
+</head>
+<body>
+<nav id="nav">
+  <div class="logo">Günüm</div>
+  <button data-view="bugun"><span>☀️</span>Bugün</button>
+  <button data-view="plan"><span>🗓️</span>Plan</button>
+  <button data-view="rutin"><span>🔁</span>Rutinler</button>
+  <button data-view="ayar"><span>⚙️</span>Ayarlar</button>
+</nav>
+<main id="main"></main>
+<button class="fab" data-act="yeni" aria-label="Görev ekle">+</button>
+<div id="toast" role="status"></div>
+
+<dialog id="dlg">
+  <form method="dialog" id="frm">
+    <h2 id="dlgT">Yeni görev</h2>
+    <div class="seg" id="fKind">
+      <button type="button" data-v="gorev">Tek seferlik görev</button>
+      <button type="button" data-v="rutin">Rutin</button>
+      <button type="button" data-v="ilac">💊 İlaç</button>
+    </div>
+    <label for="fTitle" id="fTitleL">Ne yapılacak?</label>
+    <input type="text" id="fTitle" required maxlength="120" autocomplete="off">
+    <div id="fDozWrap"><label for="fDoz">Doz / not (doktorunun söylediği şekilde)</label>
+      <input type="text" id="fDoz" maxlength="80" autocomplete="off" placeholder="Örn: 1 tablet, tok karnına"></div>
+    <div id="fCB">
+    <label>Alan</label>
+    <div class="seg" id="fCat">
+      <button type="button" data-v="kisisel">Kişisel</button>
+      <button type="button" data-v="is">İş</button>
+    </div>
+    <label>Günün bölümü</label>
+    <div class="seg" id="fBlock">
+      <button type="button" data-v="sabah">🌅 Sabah</button>
+      <button type="button" data-v="ogle">☀️ Öğle</button>
+      <button type="button" data-v="aksam">🌙 Akşam</button>
+    </div>
+    </div>
+    <div id="fDateWrap"><label for="fDate">Tarih</label><input type="date" id="fDate"></div>
+    <div id="fDaysWrap"><label>Hangi günler?</label><div class="seg days" id="fDays"></div></div>
+    <label for="fTime" id="fTimeL">Saat</label>
+    <input type="time" id="fTime">
+    <div class="actions">
+      <button type="button" class="btn danger" id="fDel">Sil</button>
+      <button type="button" class="btn ghost" id="fCancel">Vazgeç</button>
+      <button type="submit" class="btn">Kaydet</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const KEY='gunum-v1';
+const BLOCKS=[{id:'sabah',ad:'Sabah',ikon:'🌅'},{id:'ogle',ad:'Öğle',ikon:'☀️'},{id:'aksam',ad:'Akşam',ikon:'🌙'}];
+const CATS={kisisel:'Kişisel',is:'İş'};
+const DOW=[1,2,3,4,5,6,0], DOWAD=['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'];
+const $=s=>document.querySelector(s);
+const uid=()=>Math.random().toString(36).slice(2,10);
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const toDate=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const addDays=(s,n)=>{const d=toDate(s);d.setDate(d.getDate()+n);return ymd(d)};
+const today=()=>ymd(new Date());
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=(s,o)=>toDate(s).toLocaleDateString('tr-TR',o);
+
+function varsayilan(){
+  const bas=today();
+  const r=(title,cat,block,oneri)=>({id:uid(),title,cat,block,time:'',active:true,created:bas,oneri:!!oneri,
+    days:cat==='is'?[1,2,3,4,5,6]:[0,1,2,3,4,5,6]});
+  return {
+    routines:[
+      r('Yüzünü yıka','kisisel','sabah'), r('Dişlerini fırçala','kisisel','sabah'), r('1 bardak su iç','kisisel','sabah'),
+      r('Yüz yogası yap','kisisel','sabah'), r('Sabah vitaminlerini al','kisisel','sabah'), r('Sabah egzersizlerini yap','kisisel','sabah'),
+      r('Güneş kremi sür','kisisel','sabah',1), r('5 dk nefes / meditasyon','kisisel','sabah',1),
+      r('30 dk yürüyüş yap','kisisel','ogle'), r('Su molası + 5 dk ekrandan uzaklaş','kisisel','ogle',1),
+      r('30 dk egzersiz','kisisel','aksam'), r('Yüz bakımı (C vitamini, krem)','kisisel','aksam'), r('Saçını ör','kisisel','aksam'),
+      r('Günlük: bugün iyi giden 3 şey','kisisel','aksam',1), r('Ekranları kapat, 10 sayfa kitap oku','kisisel','aksam',1),
+      r('Günün en önemli 3 işini belirle','is','sabah',1), r('Maillerini kontrol et','is','sabah'),
+      r('LinkedIn’de 1 post paylaş','is','sabah'), r('Upwork vaka çalışması yap','is','sabah'),
+      r('Peri Eğitim: mevcut dersi işle','is','ogle'), r('Kadın+ prototipini revize et','is','ogle'),
+      r('Upwork’te 2 ilana teklif gönder','is','ogle',1),
+      r('Repo incele ve kullanacağın 1 fikir üret','is','aksam'), r('1 yeni yapay zeka aracı / haberi not al','is','aksam',1),
+      r('Günü değerlendir, yarını planla','is','aksam',1)
+    ],
+    tasks:[], done:{}, notified:{},
+    set:{notif:true,times:{sabah:'07:00',ogle:'12:30',aksam:'19:00'},ozet:'21:30'}
+  };
+}
+let S;
+try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+if(!S||!S.routines) S=varsayilan();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('Kaydedilemedi: tarayıcı depolaması kapalı')}
+  clearTimeout(planT);planT=setTimeout(planla,1500)}
+
+/* telefon uygulaması (Capacitor): bildirimler telefonun kendi sistemine kurulur, uygulama kapalıyken de gelir */
+const NATIVE=!!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform());
+const LN=(m,o)=>Capacitor.nativePromise('LocalNotifications',m,o||{});
+let nIzin='default', planT;
+async function planla(){
+  if(!NATIVE)return;
+  try{
+    const p=await LN('getPending');
+    if(p.notifications&&p.notifications.length)await LN('cancel',{notifications:p.notifications.map(n=>({id:n.id}))});
+    if(!S.set.notif||nIzin!=='granted')return;
+    const list=[], simdi=Date.now(); let id=1;
+    for(let g=0;g<7;g++){
+      const d=addDays(today(),g), kalan=itemsFor(d).filter(x=>!isDone(d,x.id));
+      const ekle=(saat,title,body)=>{if(!saat)return;const[h,m]=saat.split(':').map(Number),at=toDate(d);at.setHours(h,m,0,0);
+        if(at.getTime()>simdi+5000)list.push({id:id++,title,body,schedule:{at:at.toISOString(),allowWhileIdle:true}})};
+      BLOCKS.forEach(b=>{const l=kalan.filter(x=>x.block===b.id);
+        if(l.length)ekle(S.set.times[b.id],`${b.ikon} ${b.ad} rutini başlıyor`,`${l.length} iş: `+l.slice(0,3).map(x=>x.title).join(', ')+(l.length>3?'…':''))});
+      kalan.filter(x=>x.time&&!x.ilac).forEach(x=>ekle(x.time,'⏰ '+x.title,CATS[x.cat]+' · '+BLOCKS.find(b=>b.id===x.block).ad));
+      kalan.filter(x=>x.ilac).forEach(x=>{ekle(x.time,'💊 İlaç zamanı: '+x.title,x.doz||'Alınca uygulamada işaretle.');
+        ekle(arti(x.time,30),'💊 Hâlâ almadın: '+x.title,x.doz||'Aldıysan uygulamada işaretle.')});
+      ekle(S.set.ozet,'🌜 Gün sonu',g?'Günü kapat: açık kalan işlerine bak.':kalan.length?`${kalan.length} iş açık. Bitir ya da yarına taşı.`:'Bugünün tüm işleri tamam. Eline sağlık!');
+    }
+    if(list.length)await LN('schedule',{notifications:list});
+  }catch(e){console.warn('bildirim planı',e)}
+}
+const izinCevir=r=>r&&r.display==='granted'?'granted':r&&r.display==='denied'?'denied':'default';
+
+let view='bugun', sel=today(), filtre='hepsi';
+
+function itemsFor(date){
+  const dow=toDate(date).getDay();
+  const r=S.routines.filter(x=>x.active!==false&&x.days.includes(dow)&&x.created<=date).map(x=>({...x,kind:'rutin'}));
+  const t=S.tasks.filter(x=>x.date===date).map(x=>({...x,kind:'gorev'}));
+  return [...r,...t].sort((a,b)=>(a.time||'99').localeCompare(b.time||'99'));
+}
+const isDone=(date,id)=>!!(S.done[date]&&S.done[date][id]);
+function oran(date){const it=itemsFor(date);if(!it.length)return null;return it.filter(x=>isDone(date,x.id)).length/it.length}
+function seri(){
+  let n=0,d=today();
+  if((oran(d)??0)<.8) d=addDays(d,-1);
+  while((oran(d)??0)>=.8){n++;d=addDays(d,-1)}
+  return n;
+}
+const gecikenler=()=>S.tasks.filter(t=>t.date<today()&&!isDone(t.date,t.id)).sort((a,b)=>a.date.localeCompare(b.date));
+
+function itemHtml(x,date){
+  const d=isDone(date,x.id);
+  return `<div class="item ${x.cat} ${d?'done':''}">
+    <button class="chk" data-act="tik" data-id="${x.id}" data-date="${date}" aria-label="${d?'Geri al':'Tamamla'}: ${esc(x.title)}">✓</button>
+    <div class="t"><span>${esc(x.title)}</span><div class="m"><span class="tag">${x.ilac?'💊 İlaç':CATS[x.cat]}</span>${x.time?`<span>⏰ ${x.time}</span>`:''}${x.doz?`<span>${esc(x.doz)}</span>`:''}${x.kind==='gorev'?'<span>📌 Görev</span>':''}</div></div>
+    <button class="more" data-act="duzenle" data-kind="${x.kind}" data-id="${x.id}" aria-label="Düzenle">⋯</button>
+  </div>`;
+}
+
+/* hedefe göre hazır rutin paketleri */
+const norm=s=>s.toLocaleLowerCase('tr').replace(/ı/g,'i').replace(/ğ/g,'g').replace(/ü/g,'u').replace(/ş/g,'s').replace(/ö/g,'o').replace(/ç/g,'c').trim();
+const p=(title,cat,block,why,o)=>({title,cat,block,why,...o});
+const BOL_SU={sabah:'Sabah: 1 lt su iç',ogle:'Öğle: 1 lt su iç',aksam:'Akşam: 0,5–1 lt su iç'};
+const BOL_ADIM={sabah:'Sabah 30 dk yürüyüş (≈3 bin adım)',ogle:'Öğle 30 dk yürüyüş (≈3 bin adım)',aksam:'Akşam 30 dk yürüyüş (≈3 bin adım)'};
+const PAKET=[
+ {k:'kilo',ad:'Kilo verme',ikon:'🥗',kw:['kilo','zayif','diyet','yag yak','incel','gobek'],
+  not:'Genel sağlıklı yaşam bilgisidir, tıbbi tavsiye değildir. Kronik rahatsızlığın, hamilelik ya da ilaç kullanımın varsa önce doktoruna danış.',
+  items:[
+   p('Güne 1–2 bardak suyla başla','kisisel','sabah','Tokluk hissine yardım eder, şekerli içeceğin yerini alır'),
+   p('Protein ağırlıklı kahvaltı yap','kisisel','sabah','Protein tokluğu uzatır, kilo verirken kas kaybını azaltır'),
+   p('Gün boyu 2–3 lt su iç','kisisel','ogle','İhtiyaç kiloya ve havaya göre değişir; idrar açık sarıysa yeterli',{split:BOL_SU}),
+   p('Günde 8–10 bin adım at','kisisel','ogle','Düzenli günlük hareket, verilen kiloyu korumada en tutarlı alışkanlıklardan',{split:BOL_ADIM}),
+   p('Öğünde tabağın yarısı sebze olsun','kisisel','ogle','Düşük kalori yoğunluğu: aynı hacim, daha az kalori'),
+   p('Şekerli içecek yerine su / sade çay-kahve','kisisel','ogle','Sıvı kalori doyurmaz; en kolay kesilen fazlalık'),
+   p('Direnç / ağırlık antrenmanı yap','kisisel','aksam','Kilo verirken kas kütlesini korur',{days:[1,3,5]}),
+   p('Yediklerini not et','kisisel','aksam','Kendini izleme, kilo vermede kanıtı en güçlü davranışlardan'),
+   p('Yatmadan 3 saat önce yemeyi bitir','kisisel','aksam','Gece atıştırmasını ve toplam kaloriyi azaltır'),
+   p('7–9 saat uyu: 23:30’da yatakta ol','kisisel','aksam','Az uyku açlık hormonlarını ve iştahı artırır'),
+   p('Tartıl ve bel çevreni ölç','kisisel','sabah','Haftada bir aynı koşulda ölçüm; günlük oynamalar yanıltır',{days:[1]})]},
+ {k:'trader',ad:'Trader',ikon:'📈',kw:['trader','trade','borsa','forex','yatirim','kripto','hisse','piyasa'],
+  not:'Bunlar süreç ve disiplin alışkanlıklarıdır; yatırım tavsiyesi değildir.',
+  items:[
+   p('5 dk nefes egzersizi (seans öncesi)','kisisel','sabah','Sakin başlamak dürtüsel işlemi azaltır'),
+   p('Ekonomik takvimi ve haber saatlerini kontrol et','is','sabah','Haber saatinde sürprize yakalanmamak için'),
+   p('Günlük plan yaz: seviyeler, senaryo, işlem yapmama koşulları','is','sabah','Plansız işlem, en sık zarar nedeni'),
+   p('Günlük azami zararı ve işlem başı riski belirle','is','sabah','Önceden konan sınır, kötü günü küçük tutar'),
+   p('İşlem öncesi kontrol listesi: setup var mı, plan içinde mi?','is','ogle','Kontrol listesi dürtüsel girişleri eler'),
+   p('Üst üste 2 zarardan sonra bugün ekranı kapat','is','ogle','İntikam işlemini önler'),
+   p('Ekrandan kalk: 10 dk yürü, gözlerini dinlendir','kisisel','ogle','Uzun ekran süresi karar kalitesini düşürür'),
+   p('İşlem günlüğü: giriş, çıkış, gerekçe, duygu','is','aksam','Yazılı kayıt olmadan hatalar tekrar eder'),
+   p('Günün işlemlerini grafik üzerinden incele','is','aksam','Plana uydum mu? sorusuna dürüst cevap'),
+   p('7–8 saat uyu; uykusuz günde işlem yapma','kisisel','aksam','Uykusuzluk risk algısını bozar'),
+   p('Haftalık değerlendirme: istatistikler + tek bir iyileştirme','is','aksam','Haftada bir büyük resme bak',{days:[6]})]},
+ {k:'mental',ad:'Mental sağlık ve stres',ikon:'🧘',kw:['mental','stres','kaygi','anksiyete','zihin','huzur','mutlu','ruh','psikoloj','bunal','moral'],
+  not:'Genel iyi oluş alışkanlıklarıdır. Uzun süren ya da ağır belirtilerde bir uzmana başvur.',
+  items:[
+   p('Uyanınca 10 dk gün ışığı al','kisisel','sabah','Sabah ışığı uyku-uyanıklık ritmini ve ruh halini düzenler'),
+   p('10 dk meditasyon / nefes','kisisel','sabah','Düzenli farkındalık pratiği stres ve kaygıyı azaltır'),
+   p('İlk 30 dk telefona bakma','kisisel','sabah','Güne başkalarının gündemiyle başlamamak için'),
+   p('30 dk tempolu yürüyüş','kisisel','ogle','Düzenli egzersiz hafif-orta depresyon ve kaygıda etkili'),
+   p('Bir yakınınla konuş / mesajlaş','kisisel','ogle','Sosyal bağ, iyi oluşun en güçlü belirleyicilerinden'),
+   p('Şükran günlüğü: iyi giden 3 şey','kisisel','aksam','Çalışmalarda ruh halini iyileştirdiği gösterilmiş basit pratik'),
+   p('Kaygılarını kağıda dök, yarınki ilk adımı yaz','kisisel','aksam','Yazmak zihindeki döngüyü boşaltır'),
+   p('Yatmadan 1 saat önce ekranları kapat','kisisel','aksam','Uykuya geçişi kolaylaştırır')]},
+ {k:'uyku',ad:'Uyku ve enerji',ikon:'😴',kw:['uyku','uyu','yorgun','enerji','halsiz','dinlen'],
+  items:[
+   p('Her gün aynı saatte kalk','kisisel','sabah','Sabit kalkış saati, uyku düzeninin temeli'),
+   p('Uyanınca 10 dk gün ışığı al','kisisel','sabah','Biyolojik saati ayarlar'),
+   p('Son kafeini 14:00’ten önce iç','kisisel','ogle','Kafein saatlerce vücutta kalır'),
+   p('Gün içinde 20 dk’dan uzun şekerleme yapma','kisisel','ogle','Uzun şekerleme gece uykusunu böler'),
+   p('Yatmadan 1 saat önce ekranları kapat','kisisel','aksam','Parlak ışık ve içerik uykuyu geciktirir'),
+   p('Odayı serin, karanlık ve sessiz yap','kisisel','aksam','Uyku kalitesi için temel koşullar'),
+   p('Aynı saatte yat: 7–9 saat hedefle','kisisel','aksam','Yetişkinler için önerilen süre')]},
+ {k:'odak',ad:'Odak ve verimlilik',ikon:'🎯',kw:['odak','verim','ertele','disiplin','uretken','konsantr','dikkat','zaman yonet'],
+  items:[
+   p('Günün en önemli 3 işini yaz','is','sabah','Az ve net hedef, tamamlanma oranını artırır'),
+   p('90 dk derin çalışma: telefon başka odada','is','sabah','Kesintisiz blok, zor işin ilerlediği yer'),
+   p('En zor işi ilk yap','is','sabah','İrade ve dikkat sabah en yüksek'),
+   p('Bildirimleri kapat, mailleri toplu yanıtla','is','ogle','Her kesinti sonrası odak dakikalarca geri gelmez'),
+   p('Her 50 dk’da 10 dk mola: kalk, su iç','kisisel','ogle','Kısa molalar dikkati tazeler'),
+   p('2. derin çalışma bloğu (60 dk)','is','ogle','Günde 2 blok çoğu kişi için sürdürülebilir üst sınır'),
+   p('Günü kapat: yapılanları işaretle, yarını planla','is','aksam','Yarın sabah düşünmeden başlamak için')]},
+ {k:'girisim',ad:'Girişim ve online gelir',ikon:'🚀',kw:['girisim','freelance','para kazan','online','upwork','musteri','gelir','satis','is kur','startup'],
+  items:[
+   p('Bugün gelir getirecek tek işi belirle','is','sabah','Meşguliyet ile ilerleme aynı şey değil'),
+   p('5 potansiyel müşteriye / ilana ulaş','is','sabah','Düzenli erişim, düzensiz büyük kampanyadan iyidir'),
+   p('1 içerik paylaş (LinkedIn / portfolyo)','is','sabah','Görünürlük zamanla birikir'),
+   p('Ürün / hizmet üzerinde 90 dk çalış','is','ogle','Satılan şeyi iyileştirmeye ayrılmış zaman'),
+   p('1 müşteriyle / kullanıcıyla konuş, notunu al','is','ogle','Varsayım yerine gerçek geri bildirim'),
+   p('Gelir-gider ve teklif takibini güncelle','is','aksam','Ölçmediğin şeyi yönetemezsin'),
+   p('30 dk öğren: rakip, araç ya da vaka incele','is','aksam','Küçük günlük öğrenme birikir'),
+   p('Haftalık rakamlar: gelir, teklif, dönüşüm','is','aksam','Haftada bir yön kontrolü',{days:[6]})]},
+ {k:'fitness',ad:'Fitness ve güç',ikon:'💪',kw:['kas','spor','fit','guc','form','kondisyon','antrenman','sikilas'],
+  not:'Sakatlığın ya da sağlık sorunun varsa programa başlamadan önce doktoruna danış.',
+  items:[
+   p('5 dk mobilite / esneme','kisisel','sabah','Eklem hareket açıklığını korur'),
+   p('Her ana öğünde protein kaynağı ye','kisisel','ogle','Kas onarımı için gün içine yayılmış protein'),
+   p('Günde 8–10 bin adım at','kisisel','ogle','Antrenman dışı hareket genel sağlığı destekler',{split:BOL_ADIM}),
+   p('Ağırlık antrenmanı (tüm vücut)','kisisel','aksam','Haftada 2–3 gün direnç antrenmanı önerilir',{days:[1,3,5]}),
+   p('30 dk kardiyo','kisisel','aksam','Haftada 150 dk orta tempolu aktivite hedefi',{days:[2,4,6]}),
+   p('Antrenmanı kaydet: hareket, ağırlık, tekrar','kisisel','aksam','Kademeli yüklenmeyi takip etmenin yolu'),
+   p('7–9 saat uyu','kisisel','aksam','Toparlanma ve kas gelişimi uykuda olur')]},
+ {k:'ogren',ad:'Öğrenme ve gelişim',ikon:'📚',kw:['ogren','sinav','dil','ingilizce','ders','kurs','calis','yapay zeka','kodlama','egitim'],
+  items:[
+   p('25 dk odaklı çalışma (en zor konu)','is','sabah','Kısa ama her gün, uzun ama ara sıradan iyidir'),
+   p('Dünkü konuyu kitaba bakmadan hatırla','is','sabah','Geri çağırma pratiği, tekrar okumaktan etkili'),
+   p('Aralıklı tekrar: kartlarını çöz','is','ogle','Aralıklı tekrar unutmayı yavaşlatır'),
+   p('Öğrendiğini uygula: küçük bir proje adımı','is','ogle','Uygulama bilgiyi kalıcı yapar'),
+   p('Bugün öğrendiğini 3 cümleyle yaz','is','aksam','Kendi cümlelerinle anlatmak anlamayı test eder'),
+   p('20 dk kitap / makale oku','kisisel','aksam','Günlük okuma alışkanlığı')]},
+ {k:'cilt',ad:'Cilt bakımı',ikon:'🧴',kw:['cilt','yuz','sivilce','akne','bakim','leke','kirisik'],
+  not:'Geçmeyen cilt sorunlarında dermatoloğa danış.',
+  items:[
+   p('Yüzünü nazik temizleyiciyle yıka','kisisel','sabah','Temel bakımın ilk adımı'),
+   p('C vitamini serumu + nemlendirici','kisisel','sabah','Antioksidan koruma ve nem bariyeri'),
+   p('Güneş kremi sür (SPF 30+)','kisisel','sabah','Leke ve erken yaşlanmaya karşı kanıtı en güçlü adım'),
+   p('Dışarıdaysan güneş kremini yenile','kisisel','ogle','Koruma birkaç saatte azalır'),
+   p('Makyajı / güneş kremini temizle','kisisel','aksam','Gözeneklerin tıkanmasını önler'),
+   p('Gece bakımı: nemlendirici (+ varsa retinol)','kisisel','aksam','Cilt gece onarılır'),
+   p('Yastık kılıfını değiştir','kisisel','aksam','Haftada bir temiz kılıf',{days:[0]})]},
+ {k:'icerik',ad:'İçerik ve kişisel marka',ikon:'✍️',kw:['icerik','linkedin','sosyal medya','takipci','marka','instagram','youtube','blog'],
+  items:[
+   p('1 içerik fikri not al','is','sabah','Fikir bankası boş sayfa korkusunu bitirir'),
+   p('1 gönderi yaz ve paylaş','is','sabah','Düzenlilik, tek tek gönderi kalitesinden daha belirleyici'),
+   p('5 gönderiye anlamlı yorum yap','is','ogle','Etkileşim görünürlüğü artırır'),
+   p('Yorumlara ve mesajlara yanıt ver','is','ogle','İlişki kurmak, takipçi saymaktan değerli'),
+   p('Yarının içeriğini taslakla','is','aksam','Sabah yalnızca paylaşmak kalır'),
+   p('Haftalık: en iyi giden gönderiyi incele','is','aksam','Neyin işe yaradığını öğren',{days:[6]})]}
+];
+let O={q:'',pk:[],off:{},bol:{},msg:''};
+const zaten=t=>S.routines.some(r=>norm(r.title)===norm(t));
+function onerHtml(){
+  const ekli=PAKET.filter(x=>S.routines.some(r=>r.paket===x.k));
+  return `<section class="card" style="margin-bottom:14px"><h2>✨ Hedefine göre rutin oluştur</h2>
+  <form id="oForm" class="row"><input type="text" id="oQ" value="${esc(O.q)}" placeholder="Örn: zayıflamak istiyorum, trader’ım, stresim çok…" style="flex:1;min-width:200px" autocomplete="off"><button class="btn">Rutin öner</button></form>
+  <div class="chips" style="margin:10px 0 0">${PAKET.map(x=>`<button class="chip ${O.pk.includes(x.k)?'on':''}" data-act="paket" data-k="${x.k}">${x.ikon} ${x.ad}</button>`).join('')}</div>
+  ${O.msg?`<p class="note">${O.msg}</p>`:''}
+  ${PAKET.filter(x=>O.pk.includes(x.k)).map(x=>`<h3>${x.ikon} ${x.ad}</h3>`+x.items.map((it,i)=>{const id=x.k+i,var_=zaten(it.title);
+    return `<div class="item ${it.cat}"><input type="checkbox" data-o="${id}" ${var_?'disabled':O.off[id]?'':'checked'} style="width:22px;height:22px;flex:none" aria-label="${esc(it.title)}">
+    <div class="t"><span>${esc(it.title)}</span><div class="m"><span class="tag">${CATS[it.cat]}</span><span>${BLOCKS.find(b=>b.id===it.block).ad}</span>${it.days?`<span>${it.days.map(g=>DOWAD[g]).join(' ')}</span>`:''}${var_?'<span>Zaten ekli</span>':''}</div>
+    <div class="m">${esc(it.why)}</div>
+    ${it.split&&!var_?`<label style="display:flex;gap:8px;align-items:center;margin:6px 0 0;color:var(--ink)"><input type="checkbox" data-ob="${id}" ${O.bol[id]?'checked':''} style="width:18px;height:18px"> Sabah, öğle ve akşama böl</label>`:''}</div></div>`}).join('')
+    +(x.not?`<p class="note">ℹ️ ${x.not}</p>`:'')).join('')}
+  ${O.pk.length?`<div class="actions"><button class="btn ghost" data-act="oVazgec">Vazgeç</button><button class="btn" data-act="oEkle">Seçilenleri rutinlerime ekle</button></div>`:''}
+  ${ekli.length?`<div class="row" style="margin-top:12px"><span class="note" style="margin:0">Ekli paketler:</span>${ekli.map(x=>`<button class="btn ghost sm" data-act="pSil" data-k="${x.k}">${x.ikon} ${x.ad} ✕</button>`).join('')}</div>`:''}
+  </section>`;
+}
+function onerEkle(){
+  let n=0;
+  const ekle=(it,title,block,k)=>{if(zaten(title))return;n++;
+    S.routines.push({id:uid(),title,cat:it.cat,block,time:'',active:true,created:today(),oneri:true,paket:k,days:it.days||(it.cat==='is'?[1,2,3,4,5,6]:[0,1,2,3,4,5,6])})};
+  PAKET.filter(x=>O.pk.includes(x.k)).forEach(x=>x.items.forEach((it,i)=>{const id=x.k+i;if(O.off[id])return;
+    if(it.split&&O.bol[id])BLOCKS.forEach(b=>ekle(it,it.split[b.id],b.id,x.k));else ekle(it,it.title,it.block,x.k)}));
+  O={q:'',pk:[],off:{},bol:{},msg:''};save();render();
+  toast(n?`${n} rutin eklendi. Beğenmediğini ⋯ ile silebilirsin.`:'Eklenecek yeni rutin yoktu');
+}
+
+const V={};
+V.bugun=()=>{
+  const all=itemsFor(sel), o=oran(sel), yuzde=o==null?0:Math.round(o*100), C=2*Math.PI*26;
+  const d=toDate(sel), pzt=addDays(sel,-((d.getDay()+6)%7));
+  const hafta=DOW.map((g,i)=>{const dt=addDays(pzt,i),p=Math.round((oran(dt)??0)*100);
+    return `<button class="${dt===sel?'sel':''} ${dt===today()?'now':''}" data-act="gun" data-date="${dt}">${DOWAD[g]}<b>${toDate(dt).getDate()}</b><i><u style="width:${p}%"></u></i></button>`}).join('');
+  const gec=sel===today()?gecikenler():[];
+  const kalan=all.filter(x=>!isDone(sel,x.id)).length, s=seri();
+  return `
+  <div class="top">
+    <div class="when"><h1>${fmt(sel,{day:'numeric',month:'long',weekday:'long'})}</h1>
+      <div class="sub">${sel===today()?'Bugün':fmt(sel,{year:'numeric'})} · ${kalan?kalan+' görev kaldı':'Hepsi tamam 🎉'}${s?` · 🔥 ${s} gün seri`:''}</div></div>
+    <div class="ring" title="Tamamlanma"><svg width="64" height="64"><circle cx="32" cy="32" r="26" fill="none" stroke="var(--line)" stroke-width="7"/>
+      <circle cx="32" cy="32" r="26" fill="none" stroke="var(--kisisel)" stroke-width="7" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-yuzde/100)}"/></svg><b>%${yuzde}</b></div>
+  </div>
+  <div class="row" style="margin-bottom:12px;flex-wrap:nowrap">
+    <button class="ibtn" data-act="gun" data-date="${addDays(sel,-7)}" aria-label="Önceki hafta">‹</button>
+    <button class="btn ghost sm" data-act="gun" data-date="${today()}">Bugün</button>
+    <input type="date" class="in" id="git" value="${sel}" aria-label="Tarihe git" style="width:auto;flex:1;min-width:0;max-width:200px;padding:7px 9px;border-radius:12px;border:1px solid var(--line);background:var(--card)">
+    <button class="ibtn" data-act="gun" data-date="${addDays(sel,7)}" aria-label="Sonraki hafta" style="margin-left:auto">›</button>
+  </div>
+  <div class="week">${hafta}</div>
+  <div class="chips">${[['hepsi','Tümü'],['kisisel','Kişisel'],['is','İş']].map(([k,a])=>`<button class="chip ${filtre===k?'on':''}" data-act="filtre" data-v="${k}">${a}</button>`).join('')}</div>
+  ${gec.length?`<div class="card late"><h2>⏳ Geciken görevler <small>${gec.length}</small></h2>${gec.map(t=>`<div class="item ${t.cat}">
+     <button class="chk" data-act="tik" data-id="${t.id}" data-date="${t.date}" aria-label="Tamamla">✓</button>
+     <div class="t"><span>${esc(t.title)}</span><div class="m"><span>${fmt(t.date,{day:'numeric',month:'short'})}</span></div></div>
+     <button class="btn sm" data-act="tasi" data-id="${t.id}">Bugüne taşı</button></div>`).join('')}</div>`:''}
+  <div class="grid three">${BLOCKS.map(b=>{
+    const it=all.filter(x=>x.block===b.id&&(filtre==='hepsi'||x.cat===filtre));
+    const bolum=c=>{const l=it.filter(x=>x.cat===c);return l.length?`<h3>${CATS[c]}</h3>`+l.map(x=>itemHtml(x,sel)).join(''):''};
+    return `<section class="card"><h2>${b.ikon} ${b.ad} <small>${it.filter(x=>isDone(sel,x.id)).length}/${it.length}</small></h2>
+      ${it.length?bolum('kisisel')+bolum('is'):'<div class="empty">Bu bölümde iş yok.</div>'}
+      <button class="add" data-act="yeni" data-block="${b.id}">+ ${b.ad} için görev ekle</button></section>`}).join('')}</div>`;
+};
+V.plan=()=>{
+  const t=today(), ileri=S.tasks.filter(x=>x.date>=t).sort((a,b)=>(a.date+(a.time||'99')).localeCompare(b.date+(b.time||'99')));
+  const gun=[...new Set(ileri.map(x=>x.date))], gec=gecikenler();
+  return `<div class="top"><div class="when"><h1>Plan</h1><div class="sub">İleri tarihe eklediğin görevler, günü geldiğinde o günün listesine düşer.</div></div></div>
+  <div class="grid">
+  ${gec.length?`<div class="card late"><h2>⏳ Geciken <small>${gec.length}</small></h2>${gec.map(x=>`<div class="item ${x.cat}"><div class="t"><span>${esc(x.title)}</span><div class="m"><span>${fmt(x.date,{day:'numeric',month:'short'})}</span></div></div><button class="btn sm" data-act="tasi" data-id="${x.id}">Bugüne taşı</button></div>`).join('')}</div>`:''}
+  ${gun.length?gun.map(g=>`<div class="card"><h2>${g===t?'Bugün':g===addDays(t,1)?'Yarın':fmt(g,{day:'numeric',month:'long',weekday:'long'})}
+     <small><button class="btn ghost sm" data-act="gun" data-date="${g}">Günü aç</button></small></h2>
+     ${ileri.filter(x=>x.date===g).map(x=>itemHtml({...x,kind:'gorev'},g)).join('')}</div>`).join('')
+   :'<div class="card"><div class="empty">Henüz planlanmış görev yok. Sağ alttaki + ile bugüne ya da ileri bir tarihe görev ekleyebilirsin.</div></div>'}
+  </div>`;
+};
+V.rutin=()=>`<div class="top"><div class="when"><h1>Rutinler</h1><div class="sub">Her gün otomatik olarak listene gelen işler. ✨ işaretliler benim önerim — istemediğini sil.</div></div></div>${onerHtml()}
+  <div class="grid three">${Object.keys(CATS).map(c=>`<section class="card ${c}"><h2><span class="tag">${CATS[c]}</span> rutinleri</h2>
+    ${BLOCKS.map(b=>{const l=S.routines.filter(r=>r.cat===c&&r.block===b.id&&!r.ilac);return `<h3>${b.ikon} ${b.ad}</h3>`+(l.length?l.map(r=>`
+      <div class="item ${c}" style="${r.active===false?'opacity:.45':''}"><div class="t"><span>${r.oneri?'✨ ':''}${esc(r.title)}</span>
+      <div class="m"><span>${r.days.length===7?'Her gün':DOW.filter(g=>r.days.includes(g)).map(g=>DOWAD[g]).join(' ')}</span>${r.time?`<span>⏰ ${r.time}</span>`:''}${r.active===false?'<span>Duraklatıldı</span>':''}</div></div>
+      <button class="btn ghost sm" data-act="durdur" data-id="${r.id}">${r.active===false?'Aç':'Duraklat'}</button>
+      <button class="more" data-act="duzenle" data-kind="rutin" data-id="${r.id}" aria-label="Düzenle">⋯</button></div>`).join(''):'<div class="empty">—</div>')}).join('')}
+    <button class="add" data-act="yeni" data-kind="rutin" data-cat="${c}">+ ${CATS[c]} rutini ekle</button></section>`).join('')}
+  <section class="card kisisel"><h2>💊 İlaç ve vitaminler</h2>
+    ${(l=>l.length?l.map(r=>`<div class="item kisisel" style="${r.active===false?'opacity:.45':''}"><div class="t"><span>${esc(r.title)}</span>
+      <div class="m"><span>⏰ ${r.time}</span>${r.doz?`<span>${esc(r.doz)}</span>`:''}<span>${r.days.length===7?'Her gün':DOW.filter(g=>r.days.includes(g)).map(g=>DOWAD[g]).join(' ')}</span>${r.active===false?'<span>Duraklatıldı</span>':''}</div></div>
+      <button class="btn ghost sm" data-act="durdur" data-id="${r.id}">${r.active===false?'Aç':'Duraklat'}</button>
+      <button class="more" data-act="duzenle" data-kind="rutin" data-id="${r.id}" aria-label="Düzenle">⋯</button></div>`).join('')
+     :'<div class="empty">Henüz ilaç eklenmedi. Saatini girdiğin ilaç o saatte hatırlatılır; almazsan 30 dakika sonra bir kez daha.</div>')(S.routines.filter(r=>r.ilac).sort((a,b)=>a.time.localeCompare(b.time)))}
+    <button class="add" data-act="yeni" data-kind="ilac">+ İlaç / vitamin ekle</button>
+    <p class="note">ℹ️ Bu yalnızca bir hatırlatıcıdır. Doz, saat ve aç/tok kullanımı doktorunun ya da eczacının söylediği şekilde gir.</p></section></div>`;
+V.ayar=()=>{
+  const t=today(), gunler=[...Array(7)].map((_,i)=>addDays(t,i-6));
+  const destek=NATIVE||'Notification' in window, izin=NATIVE?nIzin:destek?Notification.permission:'yok';
+  return `<div class="top"><div class="when"><h1>Ayarlar</h1><div class="sub">Özet, bildirimler ve yedek</div></div></div>
+  <div class="grid three">
+  <section class="card"><h2>📈 Son 7 gün <small>🔥 ${seri()} gün seri</small></h2>
+    <div class="bars">${gunler.map(g=>{const p=Math.round((oran(g)??0)*100);return `<div>%${p}<i style="height:${p}%"></i>${DOWAD[toDate(g).getDay()]}</div>`}).join('')}</div>
+    <p class="note">Bir gün, işlerin en az %80’i bitince “seri”ye sayılır.</p></section>
+  <section class="card"><h2>🔔 Bildirimler</h2>
+    <div class="row sp" style="border-top:0"><span>Durum</span><b>${izin==='granted'?'İzin verildi ✓':izin==='denied'?'Engellenmiş':izin==='yok'?'Bu tarayıcıda yok':'İzin bekliyor'}</b></div>
+    ${izin==='default'?'<button class="btn" data-act="izin">Bildirimlere izin ver</button>':''}
+    ${izin==='granted'?'<button class="btn ghost" data-act="dene">Deneme bildirimi gönder</button>':''}
+    ${izin==='denied'?'<p class="note">Tarayıcının site ayarlarından bildirim iznini açman gerekiyor.</p>':''}
+    ${izin==='yok'?'<p class="note">iPhone / iPad’de önce Paylaş → “Ana Ekrana Ekle” ile kur, sonra uygulamayı ana ekrandan aç.</p>':''}
+    <div class="row sp" style="margin-top:10px"><span>Hatırlatmalar açık</span><input type="checkbox" data-set="notif" ${S.set.notif?'checked':''} style="width:22px;height:22px"></div>
+    ${BLOCKS.map(b=>`<div class="row sp"><span>${b.ikon} ${b.ad} başlangıcı</span><input type="time" class="in" data-set="t-${b.id}" value="${S.set.times[b.id]}"></div>`).join('')}
+    <div class="row sp"><span>🌜 Gün sonu özeti</span><input type="time" class="in" data-set="ozet" value="${S.set.ozet}"></div>
+    <p class="note">${NATIVE?'Telefon uygulamasında hatırlatmalar uygulama kapalıyken de gelir. Önümüzdeki 7 gün için kurulur; uygulamayı haftada en az bir kez açman yeterli. Telefon pil tasarrufu yüzünden birkaç dakika gecikebilir.':'Uygulama içi bildirimler, uygulama açıkken (ya da arka planda dururken) çalışır. Uygulama tamamen kapalıyken de hatırlatma almak için aşağıdaki “Takvime aktar”ı kullan.'}</p></section>
+  <section class="card">${NATIVE?'':`<h2>📅 Takvime aktar</h2>
+    <p class="note" style="margin:0 0 10px">Bölüm saatlerini, saatli rutinleri ve saatli görevleri telefonunun kendi takvimine alarmlı olarak ekler (.ics dosyası).</p>
+    <button class="btn ghost" data-act="ics">Takvim dosyasını indir</button>`}
+    <h2 style="${NATIVE?'':'margin-top:20px'}">💾 Yedek ve cihaz değiştirme</h2>
+    <p class="note" style="margin:0 0 10px">Veriler yalnızca bu cihazda durur, hiçbir sunucuya gitmez. ${NATIVE?'Yedek metin olarak panoya kopyalanır; bir nota ya da kendine göndereceğin bir mesaja yapıştırıp sakla.':'Başka cihaza taşımak için yedeği indirip orada geri yükle.'}</p>
+    <div class="row"><button class="btn ghost" data-act="yedek">${NATIVE?'Yedeği kopyala':'Yedeği indir'}</button><button class="btn ghost" data-act="yukle">${NATIVE?'Yedeği yapıştır':'Yedekten geri yükle'}</button></div>
+    <input type="file" id="dosya" accept="application/json,.json" hidden>
+    ${NATIVE?'':`<h2 style="margin-top:20px">📲 Cihaza kur</h2>
+    <p class="note" style="margin:0"><b>iPhone / iPad:</b> Safari → Paylaş → Ana Ekrana Ekle.<br><b>Android:</b> Chrome → ⋮ → Uygulamayı yükle.<br><b>PC:</b> Chrome / Edge adres çubuğundaki kur simgesi.</p>`}</section>
+  </div>`;
+};
+
+function render(){
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.view===view));
+  $('#main').innerHTML=V[view]();
+}
+let toastT;
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),4500)}
+
+/* ekleme / düzenleme penceresi */
+const dlg=$('#dlg'); let F={};
+const segSet=(el,v)=>el.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+$('#fDays').innerHTML=DOW.map(g=>`<button type="button" data-g="${g}">${DOWAD[g]}</button>`).join('');
+function dlgCiz(){
+  segSet($('#fKind'),F.kind);segSet($('#fCat'),F.cat);segSet($('#fBlock'),F.block);
+  $('#fKind').style.display=F.id?'none':'flex';
+  const il=F.kind==='ilac';
+  $('#fCB').style.display=il?'none':'';$('#fDozWrap').style.display=il?'':'none';
+  $('#fTitleL').textContent=il?'İlaç / vitamin adı':'Ne yapılacak?';
+  $('#fTimeL').textContent=il?'Saat (bu saatte hatırlatır; almazsan 30 dk sonra tekrar)':'Saat (isteğe bağlı — tam bu saatte hatırlatır)';
+  $('#fTime').required=il;
+  $('#fDateWrap').style.display=F.kind==='gorev'?'':'none';
+  $('#fDaysWrap').style.display=F.kind!=='gorev'?'':'none';
+  $('#fDays').querySelectorAll('button').forEach(b=>b.classList.toggle('on',F.days.includes(+b.dataset.g)));
+  $('#fDel').style.display=F.id?'':'none';
+  $('#dlgT').textContent=(F.id?'Düzenle: ':'Yeni ')+{gorev:'görev',rutin:'rutin',ilac:'ilaç hatırlatıcısı'}[F.kind];
+}
+const arti=(saat,dk)=>{const[h,m]=saat.split(':').map(Number),t=Math.min(h*60+m+dk,23*60+59);return pad(Math.floor(t/60))+':'+pad(t%60)};
+function ac(o){
+  const saat=new Date().getHours();
+  F={id:null,kind:'gorev',title:'',cat:filtre==='is'?'is':'kisisel',block:saat<12?'sabah':saat<17?'ogle':'aksam',date:view==='bugun'?sel:today(),time:'',days:[0,1,2,3,4,5,6],...o};
+  F.days=[...F.days];
+  $('#fTitle').value=F.title;$('#fDate').value=F.date;$('#fTime').value=F.time||'';$('#fDoz').value=F.doz||'';
+  dlgCiz();dlg.showModal();if(!F.id)$('#fTitle').focus();
+}
+['fKind','fCat','fBlock'].forEach(id=>$('#'+id).addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  F[{fKind:'kind',fCat:'cat',fBlock:'block'}[id]]=b.dataset.v;dlgCiz()}));
+$('#fDays').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const g=+b.dataset.g;
+  F.days=F.days.includes(g)?F.days.filter(x=>x!==g):[...F.days,g];dlgCiz()});
+$('#fCancel').onclick=()=>dlg.close();
+$('#fDel').onclick=()=>{
+  if(!confirm('Bu '+{gorev:'görev',rutin:'rutin',ilac:'ilaç hatırlatıcısı'}[F.kind]+' silinsin mi?'))return;
+  if(F.kind!=='gorev')S.routines=S.routines.filter(x=>x.id!==F.id);else S.tasks=S.tasks.filter(x=>x.id!==F.id);
+  save();dlg.close();render();
+};
+$('#frm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const title=$('#fTitle').value.trim(); if(!title)return;
+  const il=F.kind==='ilac', time=$('#fTime').value;
+  const ortak={title,cat:il?'kisisel':F.cat,block:il?(time<'12:00'?'sabah':time<'17:00'?'ogle':'aksam'):F.block,time};
+  if(F.kind!=='gorev'){
+    if(!F.days.length){toast('En az bir gün seç');return}
+    if(il)Object.assign(ortak,{ilac:true,doz:$('#fDoz').value.trim()});
+    const r=S.routines.find(x=>x.id===F.id);
+    if(r)Object.assign(r,ortak,{days:F.days});else S.routines.push({id:uid(),...ortak,days:F.days,active:true,created:today()});
+  }else{
+    const date=$('#fDate').value||today(), t=S.tasks.find(x=>x.id===F.id);
+    if(t)Object.assign(t,ortak,{date});else S.tasks.push({id:uid(),...ortak,date});
+    if(!F.id&&date!==sel)toast('Eklendi → '+fmt(date,{day:'numeric',month:'long',weekday:'long'}));
+  }
+  save();dlg.close();render();
+});
+
+/* tıklamalar */
+document.addEventListener('click',async e=>{
+  const n=e.target.closest('#nav button'); if(n){view=n.dataset.view;render();scrollTo(0,0);return}
+  const b=e.target.closest('[data-act]'); if(!b)return; const a=b.dataset.act, id=b.dataset.id;
+  if(a==='tik'){const d=b.dataset.date;S.done[d]=S.done[d]||{};if(S.done[d][id])delete S.done[d][id];else S.done[d][id]=1;save();render()}
+  else if(a==='gun'){sel=b.dataset.date;view='bugun';render()}
+  else if(a==='filtre'){filtre=b.dataset.v;render()}
+  else if(a==='yeni')ac({...(view==='rutin'&&{kind:'rutin'}),...(b.dataset.block&&{block:b.dataset.block}),...(b.dataset.kind&&{kind:b.dataset.kind}),...(b.dataset.cat&&{cat:b.dataset.cat})});
+  else if(a==='duzenle'){const x=(b.dataset.kind==='rutin'?S.routines:S.tasks).find(x=>x.id===id);if(x)ac({...x,kind:x.ilac?'ilac':b.dataset.kind})}
+  else if(a==='tasi'){const t=S.tasks.find(x=>x.id===id);if(t){t.date=today();save();render()}}
+  else if(a==='durdur'){const r=S.routines.find(x=>x.id===id);r.active=r.active===false;save();render()}
+  else if(a==='paket'){const k=b.dataset.k;O.pk=O.pk.includes(k)?O.pk.filter(x=>x!==k):[...O.pk,k];O.msg='';render()}
+  else if(a==='oEkle')onerEkle();
+  else if(a==='oVazgec'){O={q:'',pk:[],off:{},bol:{},msg:''};render()}
+  else if(a==='pSil'){const x=PAKET.find(x=>x.k===b.dataset.k);
+    if(confirm(`“${x.ad}” paketinden eklenen tüm rutinler silinsin mi?`)){S.routines=S.routines.filter(r=>r.paket!==x.k);save();render()}}
+  else if(a==='izin'){if(NATIVE){nIzin=izinCevir(await LN('requestPermissions'));planla()}else await Notification.requestPermission();render()}
+  else if(a==='dene'){if(NATIVE){LN('schedule',{notifications:[{id:9999,title:'Günüm',body:'Bildirimler çalışıyor ✓',schedule:{at:new Date(Date.now()+3000).toISOString(),allowWhileIdle:true}}]});toast('3 saniye içinde bildirim gelecek')}
+    else bildir('Günüm','Bildirimler çalışıyor ✓','dene')}
+  else if(a==='ics')indir('gunum.ics',ics(),'text/calendar');
+  else if(a==='yedek'){if(NATIVE)navigator.clipboard.writeText(JSON.stringify(S)).then(()=>toast('Yedek panoya kopyalandı'),()=>toast('Kopyalanamadı'));
+    else indir('gunum-yedek-'+today()+'.json',JSON.stringify(S),'application/json')}
+  else if(a==='yukle'){if(NATIVE){const tx=prompt('Yedek metnini buraya yapıştır:');if(tx)yedekYukle(tx)}else $('#dosya').click()}
+});
+document.addEventListener('change',e=>{
+  const el=e.target;
+  if(el.id==='git'&&el.value){sel=el.value;render()}
+  else if(el.dataset.o)O.off[el.dataset.o]=!el.checked;
+  else if(el.dataset.ob)O.bol[el.dataset.ob]=el.checked;
+  else if(el.dataset.set){const k=el.dataset.set;
+    if(k==='notif')S.set.notif=el.checked;else if(k==='ozet')S.set.ozet=el.value;else S.set.times[k.slice(2)]=el.value;save()}
+  else if(el.id==='dosya'&&el.files[0]){
+    el.files[0].text().then(yedekYukle);
+  }
+});
+function yedekYukle(tx){
+  try{const d=JSON.parse(tx);if(!d.routines||!d.tasks)throw 0;
+    if(confirm('Bu cihazdaki veriler yedektekiyle değiştirilecek. Devam edilsin mi?')){S=d;save();render();toast('Yedek yüklendi')}}
+  catch(e){toast('Bu geçerli bir Günüm yedeği değil')}
+}
+document.addEventListener('submit',e=>{
+  if(e.target.id!=='oForm')return; e.preventDefault();
+  O.q=$('#oQ').value.trim(); const q=norm(O.q);
+  O.pk=PAKET.filter(x=>x.kw.some(w=>q.includes(w))).map(x=>x.k);
+  O.msg=!q?'':O.pk.length?'':'Bu hedef için hazır bir paket bulamadım. Aşağıdaki alanlardan sana uyanı seçebilirsin.';
+  render();
+});
+function indir(ad,icerik,tur){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([icerik],{type:tur}));a.download=ad;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+
+/* bildirimler */
+async function bildir(baslik,govde,tag){
+  toast(baslik+' — '+govde);
+  if(!('Notification' in window)||Notification.permission!=='granted')return;
+  const o={body:govde,tag,icon:'icon-192.png',badge:'icon-192.png'};
+  try{const reg=await navigator.serviceWorker?.getRegistration();if(reg)await reg.showNotification(baslik,o);else new Notification(baslik,o)}catch(e){}
+}
+function tick(){
+  if(!S.set.notif||NATIVE)return;
+  const now=new Date(), t=ymd(now), dk=now.getHours()*60+now.getMinutes();
+  const kalan=itemsFor(t).filter(x=>!isDone(t,x.id)), olay=[];
+  BLOCKS.forEach(b=>{const l=kalan.filter(x=>x.block===b.id);
+    if(l.length)olay.push(['b-'+b.id,S.set.times[b.id],`${b.ikon} ${b.ad} rutini başlıyor`,`${l.length} iş: `+l.slice(0,3).map(x=>x.title).join(', ')+(l.length>3?'…':'')])});
+  kalan.filter(x=>x.time&&!x.ilac).forEach(x=>olay.push(['i-'+x.id,x.time,'⏰ '+x.title,CATS[x.cat]+' · '+BLOCKS.find(b=>b.id===x.block).ad]));
+  kalan.filter(x=>x.ilac).forEach(x=>{olay.push(['i-'+x.id,x.time,'💊 İlaç zamanı: '+x.title,x.doz||'Alınca uygulamada işaretle.']);
+    olay.push(['i2-'+x.id,arti(x.time,30),'💊 Hâlâ almadın: '+x.title,x.doz||'Aldıysan uygulamada işaretle.'])});
+  olay.push(['ozet',S.set.ozet,'🌜 Gün sonu',kalan.length?`${kalan.length} iş açık kaldı. Bitir ya da yarına taşı.`:'Bugünün tüm işleri tamam. Eline sağlık!']);
+  const g=S.notified[t]=S.notified[t]||{}; let degisti=false;
+  olay.forEach(([k,saat,bas,gov])=>{
+    if(!saat||g[k+saat])return; const[h,m]=saat.split(':').map(Number), fark=dk-(h*60+m);
+    if(fark>=0&&fark<=15){g[k+saat]=1;degisti=true;bildir(bas,gov,k)}
+  });
+  Object.keys(S.notified).forEach(k=>{if(k!==t){delete S.notified[k];degisti=true}});
+  if(degisti)save();
+}
+
+/* takvim dosyası */
+function ics(){
+  const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Gunum//TR','CALSCALE:GREGORIAN'], GUN=['SU','MO','TU','WE','TH','FR','SA'];
+  const temiz=s=>s.replace(/[\\;,]/g,' ');
+  const ev=(id,ad,tarih,saat,kural)=>{const[h,m]=saat.split(':').map(Number), bit=new Date(2000,0,1,h,m+15);
+    L.push('BEGIN:VEVENT','UID:'+id+'@gunum','DTSTAMP:'+new Date().toISOString().replace(/[-:]|\.\d+/g,''),
+      `DTSTART:${tarih.replace(/-/g,'')}T${pad(h)}${pad(m)}00`,`DTEND:${tarih.replace(/-/g,'')}T${pad(bit.getHours())}${pad(bit.getMinutes())}00`,'SUMMARY:'+temiz(ad));
+    if(kural)L.push('RRULE:'+kural);
+    L.push('BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+temiz(ad),'TRIGGER:PT0M','END:VALARM','END:VEVENT')};
+  const t=today();
+  BLOCKS.forEach(b=>S.set.times[b.id]&&ev('blok-'+b.id,`Günüm: ${b.ad} rutini`,t,S.set.times[b.id],'FREQ=DAILY'));
+  S.routines.filter(r=>r.time&&r.active!==false&&r.days.length).forEach(r=>{let d=t;while(!r.days.includes(toDate(d).getDay()))d=addDays(d,1);
+    ev(r.id,r.title,d,r.time,'FREQ=WEEKLY;BYDAY='+r.days.map(g=>GUN[g]).join(','))});
+  S.tasks.filter(x=>x.time&&x.date>=t).forEach(x=>ev(x.id,x.title,x.date,x.time));
+  L.push('END:VCALENDAR');return L.join('\r\n');
+}
+
+if('serviceWorker' in navigator&&!NATIVE)navigator.serviceWorker.register('sw.js').catch(()=>{});
+let sonGun=today();
+setInterval(()=>{if(today()!==sonGun){if(sel===sonGun)sel=today();sonGun=today();render();planla()}tick()},20000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){tick();planla()}});
+render();tick();
+if(NATIVE)LN('checkPermissions').then(r=>{nIzin=izinCevir(r);if(view==='ayar')render();planla()}).catch(()=>{});
+</script>
+</body>
+</html>
